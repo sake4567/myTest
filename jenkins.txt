@@ -1,0 +1,73 @@
+
+Prerequisites
+Linux
+• Packages
+»» jenkins
+»» java-1.8.0-openjdk
+Installation and Configuration
+Linux
+Be sure to install repository for the latest copy. Execute the following commands:
+yum install -y wget
+sudo wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/
+redhat/jenkins.repo
+sudo rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
+sudo yum install jenkins java-1.8.0-openjdk
+User Accounts
+Create a user called jenkins on the secondary servers you intend to use Jenkins to deploy or manage. Set the
+user as a sudo capable user and include the NOPASSWD: ALL directive in /etc/sudoers.
+On the primary Jenkins server (master), be sure to add the Jenkins user as above (NOPASSWD: ALL in /etc/
+sudoers). You must also change the user account in /etc/passwd from /bin/false to /bin/bash so it is
+an interactive user.
+Create an SSH key with ssh-keygen on the Jenkins server. Exchange that key using ssh-copy-id on
+each of the nodes you are running builds or deployments on. This allows the account to run with escalated
+privileges as needed.
+Proxy Configuration for Jenkins
+By default, Jenkins listens on port 8080. In order to connect to Jenkins over port 80, you can proxy the
+connection with Nginx. Install Nginx:
+sudo yum install nginx
+Enable and start the web server:
+Jenkins Cheat Sheet Linux Academy
+- 2 -
+sudo systemctl enable nginx
+sudo systemctl start nginx
+Edit the Nginx default configuration to proxy the connection, replace the /location directive under the /
+server section with the following configuration:
+location / {
+proxy_pass http://127.0.0.1:8080;
+proxy_redirect default;
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_max_temp_file_size 0;
+#this is the maximum upload size
+client_max_body_size 10m;
+client_body_buffer_size 128k;
+proxy_connect_timeout 90;
+proxy_send_timeout 90;
+proxy_read_timeout 90;
+proxy_buffer_size 4k;
+proxy_buffers 4 32k;
+proxy_busy_buffers_size 64k;
+proxy_temp_file_write_size 64k;
+}
+Enable and start Jenkins, restart Nginx:
+systemctl enable jenkins
+systemctl restart nginx jenkins
+Configuration Files
+• /etc/nginx/nginx.conf
+»» Primary Nginx configuration file
+»» Change server section as documented above
+• /etc/passwd
+»» Enable the jenkins user to be able to login as defined above
+• /etc/sudoers
+»» Turn off requiretty for remote builds to work correctly with sudo privileges from Jenkins
+Completing the Installation
+Connect to your server in a web browser over port 80 (if using Nginx proxy, as defined above) or port 8080
+(to go direct). You are pointed to a page asking for the default administration password. Go to the following
+Jenkins Cheat Sheet Linux Academy
+- 3 -
+directory and file to pull the password needed, like so:
+cat /var/lib/jenkins/secrets/defaultadministrationpassword
+Once you log in as administrator, you need to create an administration account as the current admin
+credentials are ephemeral (as soon as you disconnect, the credentials are invalid and the file containing
+them above is permanently removed).
